@@ -9,18 +9,33 @@ app.secret_key = "your_secret_key"
 
 STORAGE_FILE = 'files.json'
 
+
 def get_files():
-    if not os.path.exists(STORAGE_FILE):
-        return []
-    with open(STORAGE_FILE, 'r') as f:
+    files_env = os.environ.get("CLOUD_FILES")
+    if files_env:
         try:
-            return json.load(f)
+            return json.loads(files_env)
         except json.JSONDecodeError:
             return []
 
+    if not os.path.exists("files.json"):
+        return []
+    try:
+        with open("files.json", "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return []
+
 def save_files(files):
-    with open(STORAGE_FILE, 'w') as f:
-        json.dump(files, f, indent=2)
+    os.environ["CLOUD_FILES"] = json.dumps(files)
+    
+    try:
+        with open("files.json", "w") as f:
+            json.dump(files, f, indent=2)
+    except Exception as e:
+        print(f"Error saving to file (this is expected in production): {e}")
+    
+    return True
 
 @app.route('/')
 def index():
